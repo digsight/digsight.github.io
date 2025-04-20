@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>YouT-ube Iframe Generator</title>
+  <title>Smart Iframe Generator</title>
   <style>
     :root {
       --bg: #f4f6f8;
@@ -38,6 +38,7 @@
       align-items: flex-start;
       min-height: 100vh;
       transition: background 0.3s, color 0.3s;
+      flex-direction: column;
     }
 
     .wrapper {
@@ -45,10 +46,11 @@
       padding: 2rem;
       border-radius: 12px;
       box-shadow: 0 8px 24px var(--iframe-shadow);
-      max-width: 600px;
+      max-width: 800px;
       width: 100%;
       transition: background 0.3s;
       position: relative;
+      margin: 0 auto;
     }
 
     form {
@@ -63,7 +65,7 @@
       display: block;
     }
 
-    input {
+    input[type="text"] {
       width: 100%;
       padding: 0.75rem;
       font-size: 1rem;
@@ -92,13 +94,32 @@
 
     #result {
       margin-top: 2rem;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      overflow-x: auto;
+    }
+
+    #iframeWrapper {
+      position: relative;
+      max-width: 100%;
+      width: 100%;
+      height: 0;
+      padding-bottom: 56.25%;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px var(--iframe-shadow);
+      overflow: hidden;
+      margin: 0 auto;
     }
 
     iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       border: none;
       border-radius: 10px;
-      box-shadow: 0 4px 12px var(--iframe-shadow);
-      transition: box-shadow 0.3s;
     }
 
     .toggle-switch {
@@ -148,10 +169,6 @@
       margin-top: 1.5rem;
     }
 
-    #historyBox h3 {
-      margin-bottom: 0.5rem;
-    }
-
     #historyList {
       max-height: 200px;
       overflow-y: auto;
@@ -164,6 +181,46 @@
       color: var(--button-bg);
     }
 
+    select {
+      padding: 0.5rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--input-border);
+      background: var(--input-bg);
+      color: var(--text);
+    }
+
+    #aboutMePopup {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--card-bg);
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      z-index: 9999;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    #aboutMePopup h3 {
+      margin-bottom: 1rem;
+    }
+
+    #aboutMePopup button {
+      background-color: var(--button-bg);
+      color: white;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #aboutMePopup button:hover {
+      background-color: var(--button-hover);
+    }
   </style>
 </head>
 <body>
@@ -173,114 +230,160 @@
       <input type="checkbox" id="darkModeToggle" />
     </div>
 
-    <form id="nameForm">
-      <div class="form-uname">
-        <label for="nameField">Full YouTube URL:</label>
-        <input id="nameField" type="text" maxlength="100" placeholder="https://youtube.com/watch?v=..." />
+    <form id="iframeForm">
+      <div>
+        <label for="modeSelect">Mode:</label>
+        <select id="modeSelect">
+          <option value="youtube">YouTube</option>
+          <option value="generic">Generic Website</option>
+        </select>
       </div>
 
-      <div class="form-id">
-        <label for="videoIdField">Or just enter a YouTube Video ID:</label>
+      <div>
+        <label for="urlField">URL:</label>
+        <input id="urlField" type="text" maxlength="100" placeholder="Enter a YouTube or website URL" />
+      </div>
+
+      <div id="idGroup">
+        <label for="videoIdField">Or YouTube Video ID:</label>
         <input id="videoIdField" type="text" maxlength="20" placeholder="e.g. dQw4w9WgXcQ" />
       </div>
 
-      <div class="form-sub">
-        <button id="subButton" type="button">Make your iframe</button>
-        <button id="historyButton" type="button" style="margin-left: 1rem;">Show History</button>
+      <div>
+        <button type="button" id="subButton">Generate Iframe</button>
+        <button type="button" id="historyButton" style="margin-left: 1rem;">Show History</button>
+        <button type="button" id="fullscreenButton" style="margin-left: 1rem;">Fullscreen</button>
       </div>
     </form>
 
-    <div id="result"></div>
-
+    <div id="result">
+      <div id="iframeWrapper">
+        <iframe src="https://www.YouT-ube.com/watch?v=AD-3nVI3-_U" id="theIframe"></iframe>
+      </div>
+    </div>
     <div id="historyBox">
       <h3>History</h3>
       <ul id="historyList"></ul>
     </div>
+
+    <!-- About Me Button -->
+    <button id="aboutMeButton" style="margin-top: 1rem;">About Me</button>
+
+    <!-- About Me Popup -->
+    <div id="aboutMePopup">
+      <h3>About Me</h3>
+      <p>idk what to put where yet</p>
+      <button id="closePopup">Close</button>
+    </div>
   </div>
 
   <script>
-    const history = [];
-
-    function generateUrl(url, videoId) {
-      if (videoId) {
-        return `https://www.YouT-ube.com/watch?v=${videoId}`;
-      } else if (url) {
-        const shortMatch = url.match(/^https?:\/\/youtu\.be\/([a-zA-Z0-9_-]+)/);
-        if (shortMatch) {
-          url = `https://www.YouT-ube.com/watch?v=${shortMatch[1]}`;
-        }
-        return url.replace(/(YouT)(ube\.com)/i, '$1-$2');
-      }
-      return null;
-    }
-
-    document.getElementById('subButton').addEventListener('click', function () {
-      const urlInput = document.getElementById('nameField').value.trim();
-      const videoId = document.getElementById('videoIdField').value.trim();
-      const resultDiv = document.getElementById('result');
-
-      const finalUrl = generateUrl(urlInput, videoId);
-      if (!finalUrl) {
-        resultDiv.textContent = 'Please enter a URL or a video ID.';
-        return;
-      }
-
-      // Save to history (avoid duplicates)
-      if (!history.includes(finalUrl)) {
-        history.unshift(finalUrl);
-        if (history.length > 10) history.pop(); // max 10 entries
-      }
-
-      // Render iframe
-      resultDiv.innerHTML = '';
-      const iframe = document.createElement('iframe');
-      iframe.src = finalUrl;
-      iframe.width = '100%';
-      iframe.height = '400';
-      resultDiv.appendChild(iframe);
-    });
-
-    // History button logic
-    document.getElementById('historyButton').addEventListener('click', function () {
-      const box = document.getElementById('historyBox');
-      const list = document.getElementById('historyList');
-      box.style.display = box.style.display === 'none' ? 'block' : 'none';
-
-      // Clear then repopulate
-      list.innerHTML = '';
-      history.forEach(url => {
-        const li = document.createElement('li');
-        li.textContent = url;
-        li.addEventListener('click', () => {
-          document.getElementById('result').innerHTML = '';
-          const iframe = document.createElement('iframe');
-          iframe.src = url;
-          iframe.width = '100%';
-          iframe.height = '400';
-          document.getElementById('result').appendChild(iframe);
-        });
-        list.appendChild(li);
-      });
-    });
-
-    // Dark mode toggle with memory
     const toggle = document.getElementById('darkModeToggle');
+    const modeSelect = document.getElementById('modeSelect');
+    const idGroup = document.getElementById('idGroup');
+    const resultDiv = document.getElementById('result');
+    const fullscreenButton = document.getElementById('fullscreenButton');
+    const aboutMeButton = document.getElementById('aboutMeButton');
+    const aboutMePopup = document.getElementById('aboutMePopup');
+    const closePopup = document.getElementById('closePopup');
+    let iframe = document.getElementById("theIframe");
+    let history = JSON.parse(localStorage.getItem("iframeHistory") || "[]");
 
-    // Load saved theme on startup
     if (localStorage.getItem('theme') === 'dark') {
       document.body.classList.add('dark');
       toggle.checked = true;
     }
 
-    // Watch for changes and store preference
     toggle.addEventListener('change', () => {
-      if (toggle.checked) {
-        document.body.classList.add('dark');
-        localStorage.setItem('theme', 'dark');
+      document.body.classList.toggle('dark');
+      localStorage.setItem('theme', toggle.checked ? 'dark' : 'light');
+    });
+
+    modeSelect.addEventListener('change', () => {
+      idGroup.style.display = modeSelect.value === 'youtube' ? 'block' : 'none';
+    });
+
+    document.getElementById('subButton').addEventListener('click', () => {
+      const mode = modeSelect.value;
+      const urlInput = document.getElementById('urlField').value.trim();
+      const videoId = document.getElementById('videoIdField').value.trim();
+      let finalUrl = "";
+
+      if (mode === 'youtube') {
+        if (videoId) {
+          finalUrl = `https://www.YouT-ube.com/watch?v=${videoId}`;
+        } else if (urlInput) {
+          const shortMatch = urlInput.match(/^https?:\/\/youtu\.be\/([a-zA-Z0-9_-]+)/);
+          if (shortMatch) {
+            finalUrl = `https://www.YouT-ube.com/watch?v=${shortMatch[1]}`;
+          } else {
+            finalUrl = urlInput.replace(/(YouT)(ube\.com)/i, "$1-$2");
+          }
+        }
       } else {
-        document.body.classList.remove('dark');
-        localStorage.setItem('theme', 'light');
+        finalUrl = urlInput;
       }
+
+      if (!finalUrl) {
+        resultDiv.textContent = "Please enter a valid URL or Video ID.";
+        return;
+      }
+
+      if (!history.includes(finalUrl)) {
+        history.unshift(finalUrl);
+        if (history.length > 20) history.pop();
+        localStorage.setItem("iframeHistory", JSON.stringify(history));
+      }
+
+      resultDiv.innerHTML = `
+        <div id="iframeWrapper">
+          <iframe src="${finalUrl}" id="theIframe"></iframe>
+        </div>
+      `;
+
+      iframe = document.getElementById("theIframe");
+    });
+
+    fullscreenButton.addEventListener('click', () => {
+      if (iframe.requestFullscreen) {
+        iframe.requestFullscreen();
+      } else if (iframe.mozRequestFullScreen) { // Firefox
+        iframe.mozRequestFullScreen();
+      } else if (iframe.webkitRequestFullscreen) { // Chrome, Safari
+        iframe.webkitRequestFullscreen();
+      } else if (iframe.msRequestFullscreen) { // IE/Edge
+        iframe.msRequestFullscreen();
+      }
+    });
+
+    document.getElementById('historyButton').addEventListener('click', () => {
+      const box = document.getElementById('historyBox');
+      const list = document.getElementById('historyList');
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+      list.innerHTML = '';
+      history.forEach(url => {
+        const li = document.createElement('li');
+        li.textContent = url;
+        li.addEventListener('click', () => {
+          resultDiv.innerHTML = `
+            <div id="iframeWrapper">
+              <iframe src="${url}" id="theIframe"></iframe>
+            </div>
+          `;
+          iframe = document.getElementById("theIframe");
+        });
+        list.appendChild(li);
+      });
+    });
+
+    // Show About Me popup when button is clicked
+    aboutMeButton.addEventListener('click', () => {
+      aboutMePopup.style.display = 'block';
+    });
+
+    // Close the About Me popup
+    closePopup.addEventListener('click', () => {
+      aboutMePopup.style.display = 'none';
     });
   </script>
 </body>
