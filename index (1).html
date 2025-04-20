@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>YouT-ube Iframe Generator</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --text: #222;
+      --card-bg: #fff;
+      --input-bg: #fff;
+      --input-border: #ccc;
+      --button-bg: #1e90ff;
+      --button-hover: #0f78d0;
+      --iframe-shadow: rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark {
+      --bg: #121212;
+      --text: #eee;
+      --card-bg: #1e1e1e;
+      --input-bg: #2a2a2a;
+      --input-border: #444;
+      --button-bg: #3a8eff;
+      --button-hover: #2677e0;
+      --iframe-shadow: rgba(255, 255, 255, 0.05);
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 2rem;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .wrapper {
+      background: var(--card-bg);
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px var(--iframe-shadow);
+      max-width: 600px;
+      width: 100%;
+      transition: background 0.3s;
+      position: relative;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    label {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 1rem;
+      background-color: var(--input-bg);
+      color: var(--text);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      box-sizing: border-box;
+      transition: background 0.3s, border 0.3s, color 0.3s;
+    }
+
+    button {
+      padding: 0.75rem;
+      background-color: var(--button-bg);
+      color: white;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: var(--button-hover);
+    }
+
+    #result {
+      margin-top: 2rem;
+    }
+
+    iframe {
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px var(--iframe-shadow);
+      transition: box-shadow 0.3s;
+    }
+
+    .toggle-switch {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .toggle-switch input[type="checkbox"] {
+      width: 40px;
+      height: 20px;
+      appearance: none;
+      background: #ccc;
+      border-radius: 20px;
+      position: relative;
+      outline: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .toggle-switch input[type="checkbox"]::before {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+
+    .toggle-switch input[type="checkbox"]:checked {
+      background: #1e90ff;
+    }
+
+    .toggle-switch input[type="checkbox"]:checked::before {
+      transform: translateX(20px);
+    }
+
+    #historyBox {
+      display: none;
+      margin-top: 1.5rem;
+    }
+
+    #historyBox h3 {
+      margin-bottom: 0.5rem;
+    }
+
+    #historyList {
+      max-height: 200px;
+      overflow-y: auto;
+      padding-left: 1rem;
+    }
+
+    #historyList li {
+      cursor: pointer;
+      margin-bottom: 0.5rem;
+      color: var(--button-bg);
+    }
+
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="toggle-switch">
+      <label for="darkModeToggle">Dark Mode</label>
+      <input type="checkbox" id="darkModeToggle" />
+    </div>
+
+    <form id="nameForm">
+      <div class="form-uname">
+        <label for="nameField">Full YouTube URL:</label>
+        <input id="nameField" type="text" maxlength="100" placeholder="https://youtube.com/watch?v=..." />
+      </div>
+
+      <div class="form-id">
+        <label for="videoIdField">Or just enter a YouTube Video ID:</label>
+        <input id="videoIdField" type="text" maxlength="20" placeholder="e.g. dQw4w9WgXcQ" />
+      </div>
+
+      <div class="form-sub">
+        <button id="subButton" type="button">Make your iframe</button>
+        <button id="historyButton" type="button" style="margin-left: 1rem;">Show History</button>
+      </div>
+    </form>
+
+    <div id="result"></div>
+
+    <div id="historyBox">
+      <h3>History</h3>
+      <ul id="historyList"></ul>
+    </div>
+  </div>
+
+  <script>
+    const history = [];
+
+    function generateUrl(url, videoId) {
+      if (videoId) {
+        return `https://www.YouT-ube.com/watch?v=${videoId}`;
+      } else if (url) {
+        const shortMatch = url.match(/^https?:\/\/youtu\.be\/([a-zA-Z0-9_-]+)/);
+        if (shortMatch) {
+          url = `https://www.YouT-ube.com/watch?v=${shortMatch[1]}`;
+        }
+        return url.replace(/(YouT)(ube\.com)/i, '$1-$2');
+      }
+      return null;
+    }
+
+    document.getElementById('subButton').addEventListener('click', function () {
+      const urlInput = document.getElementById('nameField').value.trim();
+      const videoId = document.getElementById('videoIdField').value.trim();
+      const resultDiv = document.getElementById('result');
+
+      const finalUrl = generateUrl(urlInput, videoId);
+      if (!finalUrl) {
+        resultDiv.textContent = 'Please enter a URL or a video ID.';
+        return;
+      }
+
+      // Save to history (avoid duplicates)
+      if (!history.includes(finalUrl)) {
+        history.unshift(finalUrl);
+        if (history.length > 10) history.pop(); // max 10 entries
+      }
+
+      // Render iframe
+      resultDiv.innerHTML = '';
+      const iframe = document.createElement('iframe');
+      iframe.src = finalUrl;
+      iframe.width = '100%';
+      iframe.height = '400';
+      resultDiv.appendChild(iframe);
+    });
+
+    // History button logic
+    document.getElementById('historyButton').addEventListener('click', function () {
+      const box = document.getElementById('historyBox');
+      const list = document.getElementById('historyList');
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+
+      // Clear then repopulate
+      list.innerHTML = '';
+      history.forEach(url => {
+        const li = document.createElement('li');
+        li.textContent = url;
+        li.addEventListener('click', () => {
+          document.getElementById('result').innerHTML = '';
+          const iframe = document.createElement('iframe');
+          iframe.src = url;
+          iframe.width = '100%';
+          iframe.height = '400';
+          document.getElementById('result').appendChild(iframe);
+        });
+        list.appendChild(li);
+      });
+    });
+
+    // Dark mode toggle with memory
+    const toggle = document.getElementById('darkModeToggle');
+
+    // Load saved theme on startup
+    if (localStorage.getItem('theme') === 'dark') {
+      document.body.classList.add('dark');
+      toggle.checked = true;
+    }
+
+    // Watch for changes and store preference
+    toggle.addEventListener('change', () => {
+      if (toggle.checked) {
+        document.body.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.body.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      }
+    });
+  </script>
+</body>
+</html>
